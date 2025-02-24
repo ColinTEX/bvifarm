@@ -1,0 +1,62 @@
+{
+  "crops": [
+    {
+      "name": "Tomatoes",
+      "containers": 10,
+      "yieldPerContainer": 500,
+      "pricePerLb": 3.5
+    },
+    {
+      "name": "Basil",
+      "containers": 2,
+      "yieldPerContainer": 250,
+      "pricePerLb": 6
+    },
+    {
+      "name": "Cucumbers",
+      "containers": 3,
+      "yieldPerContainer": 600,
+      "pricePerLb": 3
+    },
+    {
+      "name": "Spinach",
+      "containers": 5,
+      "yieldPerContainer": 550,
+      "pricePerLb": 3.2
+    },
+    {
+      "name": "Lettuce",
+      "containers": 10,
+      "yieldPerContainer": 600,
+      "pricePerLb": 2.5
+    },
+    {
+      "name": "Kale",
+      "containers": 5,
+      "yieldPerContainer": 550,
+      "pricePerLb": 3
+    },
+    {
+      "name": "Microgreens",
+      "containers": 5,
+      "yieldPerContainer": 300,
+      "pricePerLb": 8
+    },
+    {
+      "name": "Arugula",
+      "containers": 10,
+      "yieldPerContainer": 500,
+      "pricePerLb": 3.2
+    }
+  ],
+  "dailyKwhPerContainer": 30,
+  "costPerKwh": 0.42,
+  "waterCost": 20,
+  "nutrientsCost": 30,
+  "maintenanceCost": 200,
+  "laborCost": 12000,
+  "rentCost": 5000,
+  "marketingCost": 2000,
+  "depreciationCost": 416.67,
+  "interestExpense": 3000
+}
