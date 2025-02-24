@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vertical Farm P/L Calculator</title>
+  <!-- Include Chart.js from a CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+    .input-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .input-row label {
+      width: 60%;
+      font-weight: bold;
+    }
+    .input-row input {
+      width: 40%;
+      padding: 6px;
+      margin-left: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .summary-box {
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .grid-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .save-load-section {
+      margin: 1rem 0;
+      display: flex;
+      gap: 1rem;
+    }
+    .crop-controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    button {
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: #fff;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .remove-btn {
+      background: #dc3545;
+    }
+    .remove-btn:hover {
+      background: #b52b38;
+    }
+    @media(max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Vertical Farm P/L Calculator</h1>
+
+  <!-- Save/Load Settings UI -->
+  <div class="save-load-section">
+    <button id="saveSettingsBtn">Save Settings</button>
+    <button id="loadSettingsBtn">Load Settings</button>
+    <input type="file" id="fileInput" style="display:none" accept=".json" />
+  </div>
+
+  <!-- Wrapper for inputs and results -->
+  <div class="container">
+    <!-- Left side: Crop Distribution & Variable Costs -->
+    <div>
+      <div class="section-title">Crop Distribution &amp; Pricing</div>
+      <table id="cropTable">
+        <thead>
+          <tr style="background: #f3f3f3;">
+            <th>Crop</th>
+            <th>Containers</th>
+            <th>Yield/Container (lbs)</th>
+            <th>Price/lb ($)</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- We'll fill these rows in on page load (see script below). -->
+        </tbody>
+      </table>
+
+      <div class="crop-controls">
+        <button id="addCropBtn">Add Crop</button>
+      </div>
+
+      <div class="section-title">Electricity Costs</div>
+      <div class="input-row">
+        <label for="dailyKwhPerContainer">Daily kWh/Container:</label>
+        <input type="number" step="0.01" id="dailyKwhPerContainer" />
+      </div>
+      <div class="input-row">
+        <label for="costPerKwh">Cost per kWh ($):</label>
+        <input type="number" step="0.01" id="costPerKwh" />
+      </div>
+
+      <div class="section-title">Other Variable Costs</div>
+      <div class="input-row">
+        <label for="waterCost">Water Cost/container ($/month):</label>
+        <input type="number" step="0.01" id="waterCost" />
+      </div>
+      <div class="input-row">
+        <label for="nutrientsCost">Nutrients &amp; Chem/container ($/month):</label>
+        <input type="number" step="0.01" id="nutrientsCost" />
+      </div>
+      <div class="input-row">
+        <label for="maintenanceCost">Maintenance Cost/container ($/month):</label>
+        <input type="number" step="0.01" id="maintenanceCost" />
+      </div>
+    </div>
+
+    <!-- Right side: Fixed Costs & Results -->
+    <div>
+      <div class="section-title">Fixed Costs</div>
+      <div class="input-row">
+        <label for="laborCost">Labor (Fixed) ($/month):</label>
+        <input type="number" step="0.01" id="laborCost" />
+      </div>
+      <div class="input-row">
+        <label for="rentCost">Rent/Lease (Fixed) ($/month):</label>
+        <input type="number" step="0.01" id="rentCost" />
+      </div>
+      <div class="input-row">
+        <label for="marketingCost">Marketing &amp; Admin (Fixed) ($/month):</label>
+        <input type="number" step="0.01" id="marketingCost" />
+      </div>
+      <div class="input-row">
+        <label for="depreciationCost">Depreciation/container ($/month):</label>
+        <input type="number" step="0.01" id="depreciationCost" />
+      </div>
+      <div class="input-row">
+        <label for="interestExpense">Interest Expense (Fixed) ($/month):</label>
+        <input type="number" step="0.01" id="interestExpense" />
+      </div>
+
+      <div class="section-title">P/L Results</div>
+      <table>
+        <thead>
+          <tr style="background: #f3f3f3;">
+            <th>Item</th>
+            <th>Calculation</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Total Containers</td>
+            <td>Sum of all crop containers</td>
+            <td id="displayTotalContainers"></td>
+          </tr>
+          <tr>
+            <td>Total Revenue</td>
+            <td>Σ (containers × yield × price)</td>
+            <td id="displayTotalRevenue"></td>
+          </tr>
+          <tr>
+            <td>Total Electricity Cost</td>
+            <td>(Containers) × (Daily kWh) × (Cost/kWh) × 30</td>
+            <td id="displayTotalElec"></td>
+          </tr>
+          <tr>
+            <td>Total Water Cost</td>
+            <td>(Containers) × waterCost</td>
+            <td id="displayTotalWater"></td>
+          </tr>
+          <tr>
+            <td>Total Nutrients &amp; Chem</td>
+            <td>(Containers) × nutrientsCost</td>
+            <td id="displayTotalNutrients"></td>
+          </tr>
+          <tr>
+            <td>Total Maintenance</td>
+            <td>(Containers) × maintenanceCost</td>
+            <td id="displayTotalMaintenance"></td>
+          </tr>
+          <tr>
+            <td>Total Depreciation</td>
+            <td>(Containers) × depreciationCost</td>
+            <td id="displayTotalDepreciation"></td>
+          </tr>
+          <tr>
+            <td>Total Fixed Costs</td>
+            <td>Labor + Rent + Marketing + Interest</td>
+            <td id="displayTotalFixed"></td>
+          </tr>
+          <tr style="font-weight: bold;">
+            <td>Total Operating Expenses</td>
+            <td>Sum of all expenses</td>
+            <td id="displayOperatingExpenses"></td>
+          </tr>
+          <tr style="font-weight: bold;">
+            <td>Net Operating Profit</td>
+            <td>Revenue - Operating Expenses</td>
+            <td id="displayNetProfit"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="summary-box">
+        <div class="grid-title">Monthly P/L Summary</div>
+        <p><strong>Total Containers:</strong> <span id="summaryContainers"></span></p>
+        <p><strong>Total Revenue:</strong> $<span id="summaryRevenue"></span></p>
+        <p><strong>Total Operating Expenses:</strong> $<span id="summaryExpenses"></span></p>
+        <p><strong>Net Operating Profit:</strong> $<span id="summaryProfit"></span></p>
+      </div>
+
+      <div class="summary-box">
+        <div class="grid-title">Expense Breakdown</div>
+        <canvas id="expenseChart" width="400" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Hard-coded initial crop data
+    let crops = [
+      { name: 'Tomatoes',    containers: 10, yieldPerContainer: 500, pricePerLb: 3.5 },
+      { name: 'Basil',       containers: 2,  yieldPerContainer: 250, pricePerLb: 6.0 },
+      { name: 'Cucumbers',   containers: 3,  yieldPerContainer: 600, pricePerLb: 3.0 },
+      { name: 'Spinach',     containers: 5,  yieldPerContainer: 550, pricePerLb: 3.2 },
+      { name: 'Lettuce',     containers: 10, yieldPerContainer: 600, pricePerLb: 2.5 },
+      { name: 'Kale',        containers: 5,  yieldPerContainer: 550, pricePerLb: 3.0 },
+      { name: 'Microgreens', containers: 5,  yieldPerContainer: 300, pricePerLb: 8.0 },
+      { name: 'Arugula',     containers: 10, yieldPerContainer: 500, pricePerLb: 3.2 },
+    ];
+
+    // We'll populate them after the DOM loads:
+    let dailyKwhPerContainerInput,
+        costPerKwhInput,
+        waterCostInput,
+        nutrientsCostInput,
+        maintenanceCostInput,
+        laborCostInput,
+        rentCostInput,
+        marketingCostInput,
+        depreciationCostInput,
+        interestExpenseInput;
+
+    // Chart instance
+    let expenseChart;
+
+    function init() {
+      // Build the crop table rows
+      initCropTable();
+
+      // Grab references to the other input elements
+      dailyKwhPerContainerInput = document.getElementById('dailyKwhPerContainer');
+      costPerKwhInput = document.getElementById('costPerKwh');
+      waterCostInput = document.getElementById('waterCost');
+      nutrientsCostInput = document.getElementById('nutrientsCost');
+      maintenanceCostInput = document.getElementById('maintenanceCost');
+      laborCostInput = document.getElementById('laborCost');
+      rentCostInput = document.getElementById('rentCost');
+      marketingCostInput = document.getElementById('marketingCost');
+      depreciationCostInput = document.getElementById('depreciationCost');
+      interestExpenseInput = document.getElementById('interestExpense');
+
+      // Set default values
+      dailyKwhPerContainerInput.value = 30;
+      costPerKwhInput.value = 0.12;
+      waterCostInput.value = 20;
+      nutrientsCostInput.value = 30;
+      maintenanceCostInput.value = 200;
+      laborCostInput.value = 12000;
+      rentCostInput.value = 5000;
+      marketingCostInput.value = 2000;
+      depreciationCostInput.value = 416.67;
+      interestExpenseInput.value = 3000;
+
+      // Add listeners so that changes trigger re-calculation
+      dailyKwhPerContainerInput.oninput = calculate;
+      costPerKwhInput.oninput = calculate;
+      waterCostInput.oninput = calculate;
+      nutrientsCostInput.oninput = calculate;
+      maintenanceCostInput.oninput = calculate;
+      laborCostInput.oninput = calculate;
+      rentCostInput.oninput = calculate;
+      marketingCostInput.oninput = calculate;
+      depreciationCostInput.oninput = calculate;
+      interestExpenseInput.oninput = calculate;
+
+      // Initialize Chart.js
+      const ctx = document.getElementById('expenseChart').getContext('2d');
+      expenseChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Electricity', 'Water', 'Nutrients', 'Maintenance', 'Depreciation', 'Fixed'],
+          datasets: [
+            {
+              label: 'Expenses ($)',
+              data: [0, 0, 0, 0, 0, 0],
+              backgroundColor: '#82ca9d',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true },
+          },
+        },
+      });
+
+      // Set up save/load event listeners
+      document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+      document.getElementById('loadSettingsBtn').addEventListener('click', () => {
+        document.getElementById('fileInput').click();
+      });
+      document.getElementById('fileInput').addEventListener('change', loadSettings);
+
+      // Add crop button
+      document.getElementById('addCropBtn').addEventListener('click', addCrop);
+
+      // Calculate once on load
+      calculate();
+    }
+
+    function initCropTable() {
+      const tbody = document.querySelector('#cropTable tbody');
+      tbody.innerHTML = '';
+      crops.forEach((crop, i) => {
+        const tr = document.createElement('tr');
+
+        // Crop name cell
+        const tdName = document.createElement('td');
+        tdName.textContent = crop.name;
+        tr.appendChild(tdName);
+
+        // Containers cell
+        const tdContainers = document.createElement('td');
+        const inputContainers = document.createElement('input');
+        inputContainers.type = 'number';
+        inputContainers.value = crop.containers;
+        inputContainers.style.width = '70px';
+        inputContainers.oninput = () => {
+          crops[i].containers = parseFloat(inputContainers.value) || 0;
+          calculate();
+        };
+        tdContainers.appendChild(inputContainers);
+        tr.appendChild(tdContainers);
+
+        // Yield cell
+        const tdYield = document.createElement('td');
+        const inputYield = document.createElement('input');
+        inputYield.type = 'number';
+        inputYield.value = crop.yieldPerContainer;
+        inputYield.style.width = '70px';
+        inputYield.oninput = () => {
+          crops[i].yieldPerContainer = parseFloat(inputYield.value) || 0;
+          calculate();
+        };
+        tdYield.appendChild(inputYield);
+        tr.appendChild(tdYield);
+
+        // Price cell
+        const tdPrice = document.createElement('td');
+        const inputPrice = document.createElement('input');
+        inputPrice.type = 'number';
+        inputPrice.step = '0.01';
+        inputPrice.value = crop.pricePerLb;
+        inputPrice.style.width = '70px';
+        inputPrice.oninput = () => {
+          crops[i].pricePerLb = parseFloat(inputPrice.value) || 0;
+          calculate();
+        };
+        tdPrice.appendChild(inputPrice);
+        tr.appendChild(tdPrice);
+
+        // Action cell
+        const tdAction = document.createElement('td');
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Remove';
+        removeBtn.classList.add('remove-btn');
+        removeBtn.onclick = () => {
+          removeCrop(i);
+        };
+        tdAction.appendChild(removeBtn);
+        tr.appendChild(tdAction);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function removeCrop(index) {
+      crops.splice(index, 1);
+      initCropTable();
+      calculate();
+    }
+
+    function addCrop() {
+      // Optionally prompt for a name, or just default it
+      const newName = prompt('Enter new crop name:', 'New Crop') || 'New Crop';
+      crops.push({
+        name: newName,
+        containers: 0,
+        yieldPerContainer: 0,
+        pricePerLb: 0,
+      });
+      initCropTable();
+      calculate();
+    }
+
+    function calculate() {
+      const dailyKwhPerContainer = parseFloat(dailyKwhPerContainerInput.value) || 0;
+      const costPerKwh = parseFloat(costPerKwhInput.value) || 0;
+      const waterCost = parseFloat(waterCostInput.value) || 0;
+      const nutrientsCost = parseFloat(nutrientsCostInput.value) || 0;
+      const maintenanceCost = parseFloat(maintenanceCostInput.value) || 0;
+      const laborCost = parseFloat(laborCostInput.value) || 0;
+      const rentCost = parseFloat(rentCostInput.value) || 0;
+      const marketingCost = parseFloat(marketingCostInput.value) || 0;
+      const depreciationCost = parseFloat(depreciationCostInput.value) || 0;
+      const interestExpense = parseFloat(interestExpenseInput.value) || 0;
+
+      // Summation logic for containers and revenue
+      let sumContainers = 0;
+      let sumRevenue = 0;
+      crops.forEach((crop) => {
+        sumContainers += crop.containers;
+        sumRevenue += crop.containers * crop.yieldPerContainer * crop.pricePerLb;
+      });
+
+      // Electricity cost calculation
+      const monthlyElecPerContainer = dailyKwhPerContainer * costPerKwh * 30;
+      const totalElec = sumContainers * monthlyElecPerContainer;
+
+      // Other variable costs based on total containers
+      const totalWater = sumContainers * waterCost;
+      const totalNutrients = sumContainers * nutrientsCost;
+      const totalMaintenance = sumContainers * maintenanceCost;
+      const totalDepreciation = sumContainers * depreciationCost;
+
+      // Fixed costs
+      const totalFixed = laborCost + rentCost + marketingCost + interestExpense;
+
+      // Operating expenses
+      const totalOperatingExpenses = totalElec + totalWater + totalNutrients + totalMaintenance + totalDepreciation + totalFixed;
+
+      const netProfit = sumRevenue - totalOperatingExpenses;
+
+      // Update display fields
+      document.getElementById('displayTotalContainers').textContent = sumContainers;
+      document.getElementById('displayTotalRevenue').textContent = '$' + sumRevenue.toFixed(2);
+      document.getElementById('displayTotalElec').textContent = '$' + totalElec.toFixed(2);
+      document.getElementById('displayTotalWater').textContent = '$' + totalWater.toFixed(2);
+      document.getElementById('displayTotalNutrients').textContent = '$' + totalNutrients.toFixed(2);
+      document.getElementById('displayTotalMaintenance').textContent = '$' + totalMaintenance.toFixed(2);
+      document.getElementById('displayTotalDepreciation').textContent = '$' + totalDepreciation.toFixed(2);
+      document.getElementById('displayTotalFixed').textContent = '$' + totalFixed.toFixed(2);
+      document.getElementById('displayOperatingExpenses').textContent = '$' + totalOperatingExpenses.toFixed(2);
+      document.getElementById('displayNetProfit').textContent = '$' + netProfit.toFixed(2);
+
+      // Update summary box
+      document.getElementById('summaryContainers').textContent = sumContainers;
+      document.getElementById('summaryRevenue').textContent = sumRevenue.toFixed(2);
+      document.getElementById('summaryExpenses').textContent = totalOperatingExpenses.toFixed(2);
+      document.getElementById('summaryProfit').textContent = netProfit.toFixed(2);
+
+      // Update chart
+      expenseChart.data.datasets[0].data = [
+        totalElec,
+        totalWater,
+        totalNutrients,
+        totalMaintenance,
+        totalDepreciation,
+        totalFixed,
+      ];
+      expenseChart.update();
+    }
+
+    function saveSettings() {
+      // Gather all current settings in a single object
+      const settings = {
+        crops: crops.map(c => ({
+          name: c.name,
+          containers: c.containers,
+          yieldPerContainer: c.yieldPerContainer,
+          pricePerLb: c.pricePerLb,
+        })),
+        dailyKwhPerContainer: parseFloat(dailyKwhPerContainerInput.value) || 0,
+        costPerKwh: parseFloat(costPerKwhInput.value) || 0,
+        waterCost: parseFloat(waterCostInput.value) || 0,
+        nutrientsCost: parseFloat(nutrientsCostInput.value) || 0,
+        maintenanceCost: parseFloat(maintenanceCostInput.value) || 0,
+        laborCost: parseFloat(laborCostInput.value) || 0,
+        rentCost: parseFloat(rentCostInput.value) || 0,
+        marketingCost: parseFloat(marketingCostInput.value) || 0,
+        depreciationCost: parseFloat(depreciationCostInput.value) || 0,
+        interestExpense: parseFloat(interestExpenseInput.value) || 0,
+      };
+
+      // Convert to JSON
+      const json = JSON.stringify(settings, null, 2);
+
+      // Create a blob and trigger a download
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'vertical-farm-settings.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function loadSettings(evt) {
+      const file = evt.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const loaded = JSON.parse(e.target.result);
+          // Apply to current state
+          // 1) crops
+          if (loaded.crops && Array.isArray(loaded.crops)) {
+            crops = loaded.crops.map(c => {
+              return {
+                name: c.name || 'Unnamed',
+                containers: c.containers || 0,
+                yieldPerContainer: c.yieldPerContainer || 0,
+                pricePerLb: c.pricePerLb || 0,
+              };
+            });
+          }
+
+          // 2) other settings
+          if (typeof loaded.dailyKwhPerContainer === 'number') {
+            dailyKwhPerContainerInput.value = loaded.dailyKwhPerContainer;
+          }
+          if (typeof loaded.costPerKwh === 'number') {
+            costPerKwhInput.value = loaded.costPerKwh;
+          }
+          if (typeof loaded.waterCost === 'number') {
+            waterCostInput.value = loaded.waterCost;
+          }
+          if (typeof loaded.nutrientsCost === 'number') {
+            nutrientsCostInput.value = loaded.nutrientsCost;
+          }
+          if (typeof loaded.maintenanceCost === 'number') {
+            maintenanceCostInput.value = loaded.maintenanceCost;
+          }
+          if (typeof loaded.laborCost === 'number') {
+            laborCostInput.value = loaded.laborCost;
+          }
+          if (typeof loaded.rentCost === 'number') {
+            rentCostInput.value = loaded.rentCost;
+          }
+          if (typeof loaded.marketingCost === 'number') {
+            marketingCostInput.value = loaded.marketingCost;
+          }
+          if (typeof loaded.depreciationCost === 'number') {
+            depreciationCostInput.value = loaded.depreciationCost;
+          }
+          if (typeof loaded.interestExpense === 'number') {
+            interestExpenseInput.value = loaded.interestExpense;
+          }
+
+          // Re-build the table to display updated crop info
+          initCropTable();
+          // Recalculate with new data
+          calculate();
+        } catch (error) {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
