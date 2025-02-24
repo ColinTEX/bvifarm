@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>BVI Vertical Farm P/L Calculator</title>
+  <title>Vertical Farm P/L Calculator</title>
   <!-- Include Chart.js from a CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -105,12 +105,16 @@
 <body>
   <h1>Vertical Farm P/L Calculator</h1>
 
-  <!-- Save/Load Settings UI -->
-  <div class="save-load-section">
-    <button id="saveSettingsBtn">Save Settings</button>
-    <button id="loadSettingsBtn">Load Settings</button>
-    <input type="file" id="fileInput" style="display:none" accept=".json" />
-  </div>
+<!-- Save/Load Settings UI -->
+<div class="save-load-section">
+  <!-- Existing JSON-based load/save -->
+  <button id="loadLocalSettingsBtn">Load from vertical-farm-settings.json</button>
+  <button id="saveLocalSettingsBtn">Download vertical-farm-settings.json</button>
+
+  <!-- New localStorage-based buttons -->
+  <button id="saveBrowserBtn">Save to Browser</button>
+  <button id="loadBrowserBtn">Load from Browser</button>
+</div>
 
   <!-- Wrapper for inputs and results -->
   <div class="container">
@@ -354,11 +358,15 @@
       });
 
       // Set up save/load event listeners
-      document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
-      document.getElementById('loadSettingsBtn').addEventListener('click', () => {
-        document.getElementById('fileInput').click();
+  document.getElementById('saveLocalSettingsBtn').addEventListener('click', saveSettings);
+  document.getElementById('loadLocalSettingsBtn').addEventListener('click', loadSettingsFromLocal);
+
+  // New localStorage-based event listeners
+  document.getElementById('saveBrowserBtn').addEventListener('click', saveToBrowser);
+  document.getElementById('loadBrowserBtn').addEventListener('click', loadFromBrowser);
       });
-      document.getElementById('fileInput').addEventListener('change', loadSettings);
+      // Removed file input approach. We'll do fetch-based loading from vertical-farm-settings.json.
+// $1 // commented out legacy code.
 
       // Add crop button
       document.getElementById('addCropBtn').addEventListener('click', addCrop);
@@ -521,14 +529,44 @@
     }
 
     function saveSettings() {
-      // Gather all current settings in a single object
-      const settings = {
-        crops: crops.map(c => ({
-          name: c.name,
-          containers: c.containers,
-          yieldPerContainer: c.yieldPerContainer,
-          pricePerLb: c.pricePerLb,
-        })),
+  // Gather all current settings in a single object
+  const settings = buildSettingsObject();
+
+  // Convert to JSON
+  const json = JSON.stringify(settings, null, 2);
+
+  // Create a blob and trigger a download
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vertical-farm-settings.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Helper to gather current settings
+function buildSettingsObject() {
+  return {
+    crops: crops.map(c => ({
+      name: c.name,
+      containers: c.containers,
+      yieldPerContainer: c.yieldPerContainer,
+      pricePerLb: c.pricePerLb,
+    })),
+    dailyKwhPerContainer: parseFloat(dailyKwhPerContainerInput.value) || 0,
+    costPerKwh: parseFloat(costPerKwhInput.value) || 0,
+    waterCost: parseFloat(waterCostInput.value) || 0,
+    nutrientsCost: parseFloat(nutrientsCostInput.value) || 0,
+    maintenanceCost: parseFloat(maintenanceCostInput.value) || 0,
+    laborCost: parseFloat(laborCostInput.value) || 0,
+    rentCost: parseFloat(rentCostInput.value) || 0,
+    marketingCost: parseFloat(marketingCostInput.value) || 0,
+    depreciationCost: parseFloat(depreciationCostInput.value) || 0,
+    interestExpense: parseFloat(interestExpenseInput.value) || 0,
+  };
+}
+)),
         dailyKwhPerContainer: parseFloat(dailyKwhPerContainerInput.value) || 0,
         costPerKwh: parseFloat(costPerKwhInput.value) || 0,
         waterCost: parseFloat(waterCostInput.value) || 0,
@@ -554,23 +592,114 @@
       URL.revokeObjectURL(url);
     }
 
-    function loadSettings(evt) {
-      const file = evt.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const loaded = JSON.parse(e.target.result);
-          // Apply to current state
-          // 1) crops
-          if (loaded.crops && Array.isArray(loaded.crops)) {
-            crops = loaded.crops.map(c => {
-              return {
-                name: c.name || 'Unnamed',
-                containers: c.containers || 0,
-                yieldPerContainer: c.yieldPerContainer || 0,
-                pricePerLb: c.pricePerLb || 0,
-              };
+    function loadSettingsFromLocal() {
+  // Attempt to load settings from vertical-farm-settings.json in the same folder
+  fetch('vertical-farm-settings.json')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Could not load vertical-farm-settings.json');
+      }
+      return response.json();
+    })
+    .then(loaded => {
+      applySettings(loaded);
+      initCropTable();
+      calculate();
+      alert('Settings loaded from vertical-farm-settings.json');
+    })
+    .catch(err => {
+      alert('Error loading vertical-farm-settings.json.
+' + err);
+    });
+}
+
+// Save to localStorage
+function saveToBrowser() {
+  const settings = buildSettingsObject();
+  localStorage.setItem('verticalFarmSettings', JSON.stringify(settings));
+  alert('Settings saved to your browser storage!');
+}
+
+// Load from localStorage
+function loadBrowser() {
+  const data = localStorage.getItem('verticalFarmSettings');
+  if (!data) {
+    alert('No settings found in browser storage.');
+    return;
+  }
+
+  try {
+    const loaded = JSON.parse(data);
+    applySettings(loaded);
+    initCropTable();
+    calculate();
+    alert('Settings loaded from your browser storage!');
+  } catch (e) {
+    alert('Error parsing stored browser data.');
+  }
+}
+
+      return response.json();
+    })
+    .then(loaded => {
+      applySettings(loaded);
+      initCropTable();
+      calculate();
+      alert('Settings loaded from vertical-farm-settings.json');
+    })
+    .catch(err => {
+      alert('Error loading vertical-farm-settings.json.
+' + err);
+    });
+}
+
+// Reusable function to apply loaded settings
+function applySettings(loaded) {
+  // 1) crops
+  if (loaded.crops && Array.isArray(loaded.crops)) {
+    crops = loaded.crops.map(c => {
+      return {
+        name: c.name || 'Unnamed',
+        containers: c.containers || 0,
+        yieldPerContainer: c.yieldPerContainer || 0,
+        pricePerLb: c.pricePerLb || 0,
+      };
+    });
+  }
+
+  // 2) other settings
+  if (typeof loaded.dailyKwhPerContainer === 'number') {
+    dailyKwhPerContainerInput.value = loaded.dailyKwhPerContainer;
+  }
+  if (typeof loaded.costPerKwh === 'number') {
+    costPerKwhInput.value = loaded.costPerKwh;
+  }
+  if (typeof loaded.waterCost === 'number') {
+    waterCostInput.value = loaded.waterCost;
+  }
+  if (typeof loaded.nutrientsCost === 'number') {
+    nutrientsCostInput.value = loaded.nutrientsCost;
+  }
+  if (typeof loaded.maintenanceCost === 'number') {
+    maintenanceCostInput.value = loaded.maintenanceCost;
+  }
+  if (typeof loaded.laborCost === 'number') {
+    laborCostInput.value = loaded.laborCost;
+  }
+  if (typeof loaded.rentCost === 'number') {
+    rentCostInput.value = loaded.rentCost;
+  }
+  if (typeof loaded.marketingCost === 'number') {
+    marketingCostInput.value = loaded.marketingCost;
+  }
+  if (typeof loaded.depreciationCost === 'number') {
+    depreciationCostInput.value = loaded.depreciationCost;
+  }
+  if (typeof loaded.interestExpense === 'number') {
+    interestExpenseInput.value = loaded.interestExpense;
+  }
+}
+;
             });
           }
 
